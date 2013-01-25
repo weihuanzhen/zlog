@@ -50,6 +50,7 @@ void zlog_rule_profile(zlog_rule_t * a_rule, int flag)
 	zc_assert(a_rule,);
 	zc_profile(flag, "---rule:[%p][%s%c%d]-[%d,%d][%s,%p,%d:%ld*%d~%s][%d][%d][%s:%s:%p];[%p]---",
 		a_rule,
+
 		a_rule->category,
 		a_rule->compare_char,
 		a_rule->level,
@@ -133,15 +134,34 @@ static int zlog_rule_output_static_file_rotate(zlog_rule_t * a_rule, zlog_thread
 {
 	size_t len;
 	struct zlog_stat info;
+	int fd;
 
 	if (zlog_format_gen_msg(a_rule->format, a_thread)) {
 		zc_error("zlog_format_gen_msg fail");
 		return -1;
 	}
 
+	fd = open(a_rule->file_path, 
+		a_rule->file_open_flags | O_WRONLY | O_APPEND | O_CREAT, a_rule->file_perms);
+	if (fd < 0) {
+		zc_error("open file[%s] fail, errno[%d]", a_rule->file_path, errno);
+		return -1;
+	}
+
 	len = zlog_buf_len(a_thread->msg_buf);
-	if (write(a_rule->static_fd, zlog_buf_str(a_thread->msg_buf), len) < 0) {
+	if (write(fd, zlog_buf_str(a_thread->msg_buf), len) < 0) {
 		zc_error("write fail, errno[%d]", errno);
+		close(fd);
+		return -1;
+	}
+
+	if (a_rule->fsync_period && ++a_rule->fsync_count >= a_rule->fsync_period) {
+		a_rule->fsync_count = 0;
+		if (fsync(fd)) zc_error("fsync[%d] fail, errno[%d]", fd, errno);
+	}
+
+	if (close(fd) < 0) {
+		zc_error("close fail, maybe cause by write, errno[%d]", errno);
 		return -1;
 	}
 
@@ -169,9 +189,7 @@ static int zlog_rule_output_static_file_rotate(zlog_rule_t * a_rule, zlog_thread
 	if (zlog_rotater_rotate(zlog_env_conf->rotater, 
 		a_rule->file_path, len,
 		zlog_rule_gen_archive_path(a_rule, a_thread),
-		a_rule->archive_max_size, a_rule->archive_max_count,
-		&(a_rule->static_fd), 
-		a_rule->file_open_flags | O_WRONLY | O_APPEND | O_CREAT, a_rule->file_perms)
+		a_rule->archive_max_size, a_rule->archive_max_count)
 		) {
 		zc_error("zlog_rotater_rotate fail");
 		return -1;
@@ -292,8 +310,7 @@ static int zlog_rule_output_dynamic_file_rotate(zlog_rule_t * a_rule, zlog_threa
 	if (zlog_rotater_rotate(zlog_env_conf->rotater, 
 		path, len,
 		zlog_rule_gen_archive_path(a_rule, a_thread),
-		a_rule->archive_max_size, a_rule->archive_max_count,
-		NULL, 0, 0)
+		a_rule->archive_max_size, a_rule->archive_max_count)
 		) {
 		zc_error("zlog_rotater_rotate fail");
 		return -1;
@@ -734,12 +751,11 @@ zlog_rule_t *zlog_rule_new(char *line,
 
 		if (file_limit) {
 			memset(archive_max_size, 0x00, sizeof(archive_max_size));
-			nscan = sscanf(file_limit, " %s * %d ~",
+			nscan = sscanf(file_limit, " %[0-9MmKkBb] * %d ~",
 					archive_max_size, &(a_rule->archive_max_count));
 			if (nscan) {
 				a_rule->archive_max_size = zc_parse_byte_size(archive_max_size);
 			}
-
 			p = strchr(file_limit, '"');
 			if (p) { /* archive file path exist */
 				rc = zlog_rule_parse_path(p,
