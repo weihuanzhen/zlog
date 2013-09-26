@@ -36,7 +36,7 @@ aclocal
 good_or_bad
 
 echo -n "Run libtoolize ..... "
-libtoolize -fci
+libtoolize -fc
 good_or_bad
 
 echo -n "Running autoconf ..... "
@@ -44,7 +44,7 @@ autoconf
 good_or_bad
 
 echo -n "Running automake ..... "
-automake -afi
+automake -afic
 good_or_bad
 
 echo "Now run ./configure <parameters> to configure application"
