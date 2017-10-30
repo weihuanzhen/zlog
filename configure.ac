@@ -21,8 +21,10 @@ AC_CHECK_LIB([pthread], [pthread_create])
 AC_CHECK_HEADERS([fcntl.h limits.h stdint.h stdlib.h string.h strings.h sys/time.h syslog.h unistd.h])
 
 # Checks for programs
-AM_CONDITIONAL([HAVE_LYX], [test "$(which lyx)" = "true"])
-AM_CONDITIONAL([HAVE_HEVEA], [test "$(which hevea)" = "true"])
+AC_CHECK_PROG([VAR_LYX], [lyx], [true], [false])
+AC_CHECK_PROG([VAR_HEVEA], [hevea], [true], [false])
+AM_CONDITIONAL([HAVE_LYX], [$VAR_LYX])
+AM_CONDITIONAL([HAVE_HEVEA], [$VAR_HEVEA])
 
 
 # Checks for typedefs, structures, and compiler characteristics.
