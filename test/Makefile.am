@@ -5,6 +5,7 @@ check_PROGRAMS = test_bitmap \
 	test_buf \
 	test_conf \
 	test_default \
+	test_enabled.c \
 	test_hashtable \
 	test_hello  \
 	test_hex \
