@@ -57,12 +57,16 @@ INSTALL_BINARY_PATH=  $(PREFIX)/$(BINARY_PATH)
 
 # Platform-specific overrides
 uname_S := $(shell sh -c 'uname -s 2>/dev/null || echo not')
+compiler_platform := $(shell sh -c '$(CC) --version|grep -i apple')
+
 ifeq ($(uname_S),SunOS)
 #  REAL_LDFLAGS+= -ldl -lnsl -lsocket
   DYLIB_MAKE_CMD=$(CC) -G -o $(DYLIBNAME) -h $(DYLIB_MINOR_NAME) $(LDFLAGS)
   INSTALL= cp -r
 endif
-ifeq ($(uname_S),Darwin)
+
+# For Darwin builds, check the compiler platform above is not empty. The covers cross compilation on Linux
+ifneq ($(compiler_platform),)
   DYLIBSUFFIX=dylib
   DYLIB_MINOR_NAME=$(LIBNAME).$(ZLOG_MAJOR).$(ZLOG_MINOR).$(DYLIBSUFFIX)
   DYLIB_MAJOR_NAME=$(LIBNAME).$(ZLOG_MAJOR).$(DYLIBSUFFIX)
@@ -149,7 +153,7 @@ zlog-chk-conf: zlog-chk-conf.o $(STLIBNAME) $(DYLIBNAME)
 	$(CC) -std=c99 -pedantic -c $(REAL_CFLAGS) $<
 
 clean:
-	rm -rf $(DYLIBNAME) $(STLIBNAME) $(BINS) *.o *.gcda *.gcno *.gcov $(DYLIB_MINOR_NAME)
+	rm -rf $(DYLIBNAME) $(STLIBNAME) $(BINS) *.o *.gcda *.gcno *.gcov $(DYLIB_MINOR_NAME) $(DYLIB_MAJOR_NAME)
 
 dep:
 	$(CC) -MM *.c

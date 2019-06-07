@@ -192,13 +192,6 @@ static int zlog_rule_output_static_file_rotate(zlog_rule_t * a_rule, zlog_thread
 		return -1;
 	}
 
-	if (a_rule->fsync_period && ++a_rule->fsync_count >= a_rule->fsync_period) {
-		a_rule->fsync_count = 0;
-		if (fsync(a_rule->static_fd)) {
-			zc_error("fsync[%d] fail, errno[%d]", a_rule->static_fd, errno);
-		}
-	}
-
 	if (len > a_rule->archive_max_size) {
 		zc_debug("one msg's len[%ld] > archive_max_size[%ld], no rotate",
 			 (long)len, (long)a_rule->archive_max_size);
@@ -830,6 +823,12 @@ zlog_rule_t *zlog_rule_new(char *line,
 				zc_error("stat [%s] fail, errno[%d], failing to open static_fd", a_rule->file_path, errno);
 				goto err;
 			}
+
+			if (a_rule->archive_max_size > 0) {
+				close(a_rule->static_fd);
+				a_rule->static_fd = -1;
+			}
+
 			a_rule->static_dev = stb.st_dev;
 			a_rule->static_ino = stb.st_ino;
 		}
@@ -932,7 +931,6 @@ zlog_rule_t *zlog_rule_new(char *line,
 		goto err;
 	}
 
-	//zlog_rule_profile(a_rule, ZC_DEBUG);
 	return a_rule;
 err:
 	zlog_rule_del(a_rule);
@@ -960,8 +958,8 @@ void zlog_rule_del(zlog_rule_t * a_rule)
 		zc_arraylist_del(a_rule->archive_specs);
 		a_rule->archive_specs = NULL;
 	}
-	free(a_rule);
 	zc_debug("zlog_rule_del[%p]", a_rule);
+    free(a_rule);
 	return;
 }
 
