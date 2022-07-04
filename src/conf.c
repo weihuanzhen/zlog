@@ -121,7 +121,7 @@ zlog_conf_t *zlog_conf_new(const char *config)
 	} else if (getenv("ZLOG_CONF_PATH") != NULL) {
 		nwrite = snprintf(a_conf->file, sizeof(a_conf->file), "%s", getenv("ZLOG_CONF_PATH"));
 		cfg_source = FILE_CFG;
-	} else if (config[0]=='[') {
+	} else if (config && config[0]=='[') {
 		memset(a_conf->file, 0x00, sizeof(a_conf->file));
 		nwrite = snprintf(a_conf->cfg_ptr, sizeof(a_conf->cfg_ptr), "%s", config);
 		cfg_source = IN_MEMORY_CFG;
@@ -305,7 +305,7 @@ static int zlog_conf_build_with_file(zlog_conf_t * a_conf)
 				/* Oops the buffer is full - what now? */
 				pline = line;
 			} else {
-				for (p--; isspace((int)*p); --p)
+				for (p--; p >= line && isspace((int)*p); --p)
 					/*EMPTY*/;
 				p++;
 				*p = 0;
@@ -384,7 +384,7 @@ static int zlog_conf_parse_line(zlog_conf_t * a_conf, char *line, int *section)
 {
 	int nscan;
 	int nread;
-	char name[MAXLEN_CFG_LINE + 1];
+	char name[MAXLEN_CFG_LINE + 1] = "";
 	char word_1[MAXLEN_CFG_LINE + 1];
 	char word_2[MAXLEN_CFG_LINE + 1];
 	char word_3[MAXLEN_CFG_LINE + 1];
