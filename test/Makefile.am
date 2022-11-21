@@ -1,5 +1,5 @@
 LDADD = $(top_builddir)/src/libzlog.la
-AM_CFLAGS = -I$(top_builddir)/src
+AM_CFLAGS = -I$(top_srcdir)/src
 test_level_SOURCES = test_level.c test_level.h
 check_PROGRAMS = test_bitmap \
 	test_buf \
